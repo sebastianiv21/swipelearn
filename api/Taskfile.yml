@@ -1,0 +1,136 @@
+# https://taskfile.dev
+
+version: '3'
+
+# Global variables
+vars:
+  # App configuration
+  APP_NAME: swipelearn-api
+  # Default version (can be overridden)
+  VERSION: v1.0.0
+  # Build configuration
+  BUILD_DIR: bin
+  MAIN_PATH: cmd/server/main.go
+
+  # Dynamic variables - calculated at runtime
+  GIT_COMMIT:
+    sh: git rev-parse HEAD 2>/dev/null || echo "unknown"
+  BUILD_TIME:
+    sh: date -u +"%Y-%m-%dT%H:%M:%SZ"
+  GO_VERSION:
+    sh: go version | awk '{print $3}'
+  LD_FLAGS: '-X main.Version={{.VERSION}} -X main.GitCommit={{.GIT_COMMIT}} -X main.BuildTime={{.BUILD_TIME}}'
+# Global environment variables
+env:
+  CGO_ENABLED: "0"
+# Tasks
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+  # Development tasks
+  dev:
+    desc: Run server in development mode
+    cmds:
+      - go run {{.MAIN_PATH}}
+    silent: false
+  # Build tasks
+  build:
+    desc: Build the application with version info
+    cmds:
+      - echo "Building {{.APP_NAME}} {{.VERSION}}"
+      - echo "Git commit:{{.GIT_COMMIT}}"
+      - echo "Build time:{{.BUILD_TIME}}"
+      - echo "Go version:{{.GO_VERSION}}"
+      - mkdir -p {{.BUILD_DIR}}
+      - go build -ldflags "{{.LD_FLAGS}}" -o {{.BUILD_DIR}}/{{.APP_NAME}} {{.MAIN_PATH}}
+      - echo "✅ Build completed:{{.BUILD_DIR}}/{{.APP_NAME}}"
+  build-prod:
+    desc: Build for production with optimizations
+    cmds:
+      - echo "🚀 Building {{.APP_NAME}} for production"
+      - mkdir -p {{.BUILD_DIR}}
+      - go build -ldflags "{{.LD_FLAGS}}" -trimpath -o {{.BUILD_DIR}}/{{.APP_NAME}} {{.MAIN_PATH}}
+      - echo "✅ Production build completed"
+  # Run tasks
+  run:
+    desc: Run the built binary
+    cmds:
+      - ./{{.BUILD_DIR}}/{{.APP_NAME}}
+  run-prod:
+    desc: Build and run in production mode
+    deps: [build-prod]
+    cmds:
+      - GIN_MODE=release ./{{.BUILD_DIR}}/{{.APP_NAME}}
+  # Testing tasks
+  test:
+    desc: Run all tests
+    cmds:
+      - echo "🧪 Running tests..."
+      - go test -v ./...
+  test-coverage:
+    desc: Run tests with coverage
+    cmds:
+      - echo "📊 Running tests with coverage..."
+      - mkdir -p {{.BUILD_DIR}}
+      - go test -v -coverprofile={{.BUILD_DIR}}/coverage.out ./...
+      - go tool cover -html={{.BUILD_DIR}}/coverage.out -o {{.BUILD_DIR}}/coverage.html
+      - echo "📄 Coverage report:{{.BUILD_DIR}}/coverage.html"
+  # Linting and formatting
+  fmt:
+    desc: Format Go code
+    cmds:
+      - echo "🎨 Formatting code..."
+      - go fmt ./...
+  lint:
+    desc: Run linter (requires golangci-lint)
+    cmds:
+      - echo "🔍 Running linter..."
+      - golangci-lint run
+  # Dependency management
+  deps:
+    desc: Download and update dependencies
+    cmds:
+      - echo "📦 Managing dependencies..."
+      - go mod download
+      - go mod tidy
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - echo "🧹 Cleaning build artifacts..."
+      - rm -rf {{.BUILD_DIR}}
+      - go clean
+  # Version and info tasks
+  version:
+    desc: Show version information
+    cmds:
+      - echo "📋 {{.APP_NAME}} Version Information"
+      - echo "Version:{{.VERSION}}"
+      - echo "Git commit:{{.GIT_COMMIT}}"
+      - echo "Build time:{{.BUILD_TIME}}"
+      - echo "Go version:{{.GO_VERSION}}"
+  info:
+    desc: Show detailed build info
+    cmds:
+      - task: version
+      - echo "Main path:{{.MAIN_PATH}}"
+      - echo "Build dir:{{.BUILD_DIR}}"
+      - echo "LD flags:{{.LD_FLAGS}}"
+  # Installation tasks
+  install-task:
+    desc: Install Task (go-task)
+    cmds:
+      - echo "📥 Installing Task..."
+      - go install github.com/go-task/task/v3/cmd/task@latest
+  # Development workflow
+  dev-check:
+    desc: Run full development workflow (fmt, test, build)
+    deps: [fmt, test, build]
+    cmds:
+      - echo "✅ Development workflow completed successfully!"
+  ci:
+    desc: Run CI pipeline (deps, test, build-prod)
+    deps: [deps, test, build-prod]
+    cmds:
+      - echo "✅ CI pipeline completed successfully!"
