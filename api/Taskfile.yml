@@ -1,6 +1,6 @@
 # https://taskfile.dev
 
-version: '3'
+version: "3"
 
 # Global variables
 vars:
@@ -15,7 +15,7 @@ vars:
     sh: date -u +"%Y-%m-%dT%H:%M:%SZ"
   GO_VERSION:
     sh: go version | awk '{print $3}'
-  LD_FLAGS: '-X main.Version={{.VERSION}} -X main.GitCommit={{.GIT_COMMIT}} -X main.BuildTime={{.BUILD_TIME}}'
+  LD_FLAGS: "-X main.Version={{.VERSION}} -X main.GitCommit={{.GIT_COMMIT}} -X main.BuildTime={{.BUILD_TIME}}"
 
 # Global environment variables
 env:
@@ -145,3 +145,24 @@ tasks:
       - task: deps
       - task: test
       - echo "✅ Setup complete! Run 'task dev' to start development"
+
+  # Database migrations
+  migrate-up:
+    desc: Run database migrations up (local)
+    cmds:
+      - |
+        set -a
+        . ../.env
+        set +a
+        DATABASE_URL="postgres://${DB_USER}:${DB_PASSWORD}@localhost:${DB_PORT}/${DB_NAME}?sslmode=disable"
+        migrate -path migrations -database "$DATABASE_URL" up
+
+  migrate-down:
+    desc: Roll back last migration (local)
+    cmds:
+      - |
+        set -a
+        . ../.env
+        set +a
+        DATABASE_URL="postgres://${DB_USER}:${DB_PASSWORD}@localhost:${DB_PORT}/${DB_NAME}?sslmode=disable"
+        migrate -path migrations -database "$DATABASE_URL" down 1

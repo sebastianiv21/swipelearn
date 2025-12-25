@@ -116,7 +116,7 @@ func main() {
 	// Configure server with proper timeouts
 	port := os.Getenv("API_PORT")
 	if port == "" {
-		port = "8080"
+		port = "5050"
 		logger.WithField("port", port).Info("PORT not set, using default")
 	}
 
