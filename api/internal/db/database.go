@@ -7,12 +7,13 @@ import (
 	"os"
 	"time"
 
+	_ "github.com/lib/pq"
 	"github.com/sirupsen/logrus"
 	"swipelearn-api/internal/utils"
 )
 
 type Database struct {
-	DB *sql.DB
+	DB     *sql.DB
 	Logger *logrus.Logger
 }
 
@@ -46,7 +47,7 @@ func NewDatabase(logger *logrus.Logger) (*Database, error) {
 	logger.Info("Database connection established successfully!")
 
 	return &Database{
-		DB: db,
+		DB:     db,
 		Logger: logger,
 	}, nil
 }

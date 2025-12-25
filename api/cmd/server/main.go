@@ -9,9 +9,15 @@ import (
 	"syscall"
 	"time"
 
+	"swipelearn-api/internal/db"
+	"swipelearn-api/internal/handlers"
+	"swipelearn-api/internal/repositories"
+	"swipelearn-api/internal/routes"
+	"swipelearn-api/internal/services"
+	"swipelearn-api/internal/utils"
+
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
-	"swipelearn-api/internal/utils"
 )
 
 // Version information - will be set at build time
@@ -24,40 +30,27 @@ var (
 
 func main() {
 	// Initialize structured logger
-	logger := logrus.New()
+	logger := utils.SetupLogger()
 
-	// Configure Gin mode
-	if os.Getenv("GIN_MODE") == "release" {
-		gin.SetMode(gin.ReleaseMode)
-		logger.SetFormatter(&logrus.JSONFormatter{})
-	} else {
-		logger.SetFormatter(&logrus.TextFormatter{
-			FullTimestamp: true,
-		})
+	// Initialize database
+	database, err := db.NewDatabase(logger)
+	if err != nil {
+		logger.WithError(err).Fatal("Failed to initialize database")
 	}
-	// Configure log level from environment
-	logLevel := utils.GetEnvAsString("LOG_LEVEL", "info")
-	switch logLevel {
-	case "debug":
-		logger.SetLevel(logrus.DebugLevel)
-	case "warn":
-		logger.SetLevel(logrus.WarnLevel)
-	case "error":
-		logger.SetLevel(logrus.ErrorLevel)
-	default:
-		logger.SetLevel(logrus.InfoLevel)
-	}
+	defer database.Close()
 
-	// Log server version info on startup
-	logger.WithFields(logrus.Fields{
-		"version":    Version,
-		"git_commit": GitCommit,
-		"build_time": BuildTime,
-		"go_version": GoVersion,
-	}).Info("Starting SwipeLearn API Server")
+	// Initialize layers (Dependency Injection)
+	flashcardRepo := repositories.NewFlashcardRepository(database.DB, logger)
+	flashcardService := services.NewFlashcardService(flashcardRepo, logger)
+	flashcardHandler := handlers.NewFlashcardHandler(flashcardService)
 
-	// Create Gin router
-	router := gin.New()
+	// Setup routes
+	router := routes.SetupRouter(
+		flashcardHandler,
+		// deckHandler,
+		// userHandler,
+		// healthHandler,
+	)
 
 	// Add logging middleware
 	router.Use(gin.LoggerWithFormatter(func(params gin.LogFormatterParams) string {
@@ -132,7 +125,7 @@ func main() {
 		Handler:           router,
 		ReadTimeout:       utils.GetEnvAsDuration("SERVER_READ_TIMEOUT", 10*time.Second),
 		WriteTimeout:      utils.GetEnvAsDuration("SERVER_WRITE_TIMEOUT", 10*time.Second),
-		ReadHeaderTimeout:  utils.GetEnvAsDuration("SERVER_READ_HEADER_TIMEOUT", 5*time.Second),
+		ReadHeaderTimeout: utils.GetEnvAsDuration("SERVER_READ_HEADER_TIMEOUT", 5*time.Second),
 		IdleTimeout:       utils.GetEnvAsDuration("SERVER_IDLE_TIMEOUT", 60*time.Second),
 	}
 
