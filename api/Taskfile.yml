@@ -4,12 +4,8 @@ version: '3'
 
 # Global variables
 vars:
-  # App configuration
   APP_NAME: swipelearn-api
-  # Default version (can be overridden)
   VERSION: v1.0.0
-  # Build configuration
-  BUILD_DIR: bin
   MAIN_PATH: cmd/server/main.go
 
   # Dynamic variables - calculated at runtime
@@ -20,117 +16,132 @@ vars:
   GO_VERSION:
     sh: go version | awk '{print $3}'
   LD_FLAGS: '-X main.Version={{.VERSION}} -X main.GitCommit={{.GIT_COMMIT}} -X main.BuildTime={{.BUILD_TIME}}'
+
 # Global environment variables
 env:
   CGO_ENABLED: "0"
+
 # Tasks
 tasks:
   default:
     desc: Show available tasks
     cmds:
-      - task --list
-  # Development tasks
+      - task --list-all | head -20
+
+  # Development (Docker-focused)
   dev:
-    desc: Run server in development mode
+    desc: Start development environment with Docker Compose
     cmds:
+      - echo "🚀 Starting development environment..."
+      - docker-compose -f ../docker-compose.dev.yml up -d
+      - echo "✅ Development environment started"
+      - echo "📊 View logs with docker-compose logs -f"
+      - echo "🛑 Stop with docker-compose down"
+
+  dev-logs:
+    desc: Follow development logs
+    cmds:
+      - docker-compose logs -f
+
+  dev-stop:
+    desc: Stop development environment
+    cmds:
+      - docker-compose down
+      - echo "🛑 Development environment stopped"
+
+  dev-clean:
+    desc: Stop and clean development environment (removes volumes)
+    cmds:
+      - docker-compose down -v
+      - docker system prune -f
+      - echo "🧹 Development environment cleaned"
+
+  # Local development (without Docker)
+  local:
+    desc: Run server locally (without Docker)
+    cmds:
+      - echo "🏃 Running server locally..."
       - go run {{.MAIN_PATH}}
-    silent: false
+
+  local-hot:
+    desc: Run locally with hot reload (air)
+    cmds:
+      - echo "🔥 Running with hot reload..."
+      - air -c .air.toml
+
   # Build tasks
   build:
-    desc: Build the application with version info
+    desc: Build application
     cmds:
-      - echo "Building {{.APP_NAME}} {{.VERSION}}"
-      - echo "Git commit:{{.GIT_COMMIT}}"
-      - echo "Build time:{{.BUILD_TIME}}"
-      - echo "Go version:{{.GO_VERSION}}"
-      - mkdir -p {{.BUILD_DIR}}
-      - go build -ldflags "{{.LD_FLAGS}}" -o {{.BUILD_DIR}}/{{.APP_NAME}} {{.MAIN_PATH}}
-      - echo "✅ Build completed:{{.BUILD_DIR}}/{{.APP_NAME}}"
+      - echo "🔨 Building {{.APP_NAME}}..."
+      - go build -ldflags "{{.LD_FLAGS}}" -o bin/{{.APP_NAME}} {{.MAIN_PATH}}
+      - echo "✅ Build completed bin/{{.APP_NAME}}"
+
   build-prod:
-    desc: Build for production with optimizations
+    desc: Build for production
     cmds:
-      - echo "🚀 Building {{.APP_NAME}} for production"
-      - mkdir -p {{.BUILD_DIR}}
-      - go build -ldflags "{{.LD_FLAGS}}" -trimpath -o {{.BUILD_DIR}}/{{.APP_NAME}} {{.MAIN_PATH}}
+      - echo "🚀 Building for production..."
+      - go build -ldflags "{{.LD_FLAGS}}" -trimpath -o bin/{{.APP_NAME}} {{.MAIN_PATH}}
       - echo "✅ Production build completed"
-  # Run tasks
-  run:
-    desc: Run the built binary
-    cmds:
-      - ./{{.BUILD_DIR}}/{{.APP_NAME}}
-  run-prod:
-    desc: Build and run in production mode
-    deps: [build-prod]
-    cmds:
-      - GIN_MODE=release ./{{.BUILD_DIR}}/{{.APP_NAME}}
-  # Testing tasks
+
+  # Testing
   test:
-    desc: Run all tests
+    desc: Run tests
     cmds:
       - echo "🧪 Running tests..."
       - go test -v ./...
+
   test-coverage:
     desc: Run tests with coverage
     cmds:
       - echo "📊 Running tests with coverage..."
-      - mkdir -p {{.BUILD_DIR}}
-      - go test -v -coverprofile={{.BUILD_DIR}}/coverage.out ./...
-      - go tool cover -html={{.BUILD_DIR}}/coverage.out -o {{.BUILD_DIR}}/coverage.html
-      - echo "📄 Coverage report:{{.BUILD_DIR}}/coverage.html"
-  # Linting and formatting
+      - go test -v -coverprofile=bin/coverage.out ./...
+      - go tool cover -html=bin/coverage.out -o bin/coverage.html
+      - echo "📄 Coverage report bin/coverage.html"
+
+  # Code quality
   fmt:
     desc: Format Go code
     cmds:
       - echo "🎨 Formatting code..."
       - go fmt ./...
+
   lint:
-    desc: Run linter (requires golangci-lint)
+    desc: Run linter
     cmds:
       - echo "🔍 Running linter..."
       - golangci-lint run
-  # Dependency management
+
+  # Dependencies
   deps:
-    desc: Download and update dependencies
+    desc: Update dependencies
     cmds:
-      - echo "📦 Managing dependencies..."
+      - echo "📦 Updating dependencies..."
       - go mod download
       - go mod tidy
+
   clean:
     desc: Clean build artifacts
     cmds:
-      - echo "🧹 Cleaning build artifacts..."
-      - rm -rf {{.BUILD_DIR}}
+      - echo "🧹 Cleaning..."
+      - rm -rf bin/
+      - rm -rf tmp/
       - go clean
-  # Version and info tasks
+
+  # Version info
   version:
-    desc: Show version information
+    desc: Show version info
     cmds:
-      - echo "📋 {{.APP_NAME}} Version Information"
-      - echo "Version:{{.VERSION}}"
-      - echo "Git commit:{{.GIT_COMMIT}}"
-      - echo "Build time:{{.BUILD_TIME}}"
-      - echo "Go version:{{.GO_VERSION}}"
-  info:
-    desc: Show detailed build info
+      - echo "📋 {{.APP_NAME}} {{.VERSION}}"
+      - echo "Git {{.GIT_COMMIT}}"
+      - echo "Built {{.BUILD_TIME}}"
+      - echo "Go {{.GO_VERSION}}"
+
+  # Setup
+  setup:
+    desc: Initial setup for new developers
     cmds:
-      - task: version
-      - echo "Main path:{{.MAIN_PATH}}"
-      - echo "Build dir:{{.BUILD_DIR}}"
-      - echo "LD flags:{{.LD_FLAGS}}"
-  # Installation tasks
-  install-task:
-    desc: Install Task (go-task)
-    cmds:
-      - echo "📥 Installing Task..."
-      - go install github.com/go-task/task/v3/cmd/task@latest
-  # Development workflow
-  dev-check:
-    desc: Run full development workflow (fmt, test, build)
-    deps: [fmt, test, build]
-    cmds:
-      - echo "✅ Development workflow completed successfully!"
-  ci:
-    desc: Run CI pipeline (deps, test, build-prod)
-    deps: [deps, test, build-prod]
-    cmds:
-      - echo "✅ CI pipeline completed successfully!"
+      - echo "🔧 Setting up SwipeLearn API..."
+      - task: deps
+      - task: test
+      - echo "✅ Setup complete! Run 'task dev' to start development"

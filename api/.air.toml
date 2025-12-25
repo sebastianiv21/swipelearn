@@ -1,0 +1,23 @@
+root = "."
+tmp_dir = "/tmp"  # Use /tmp in containers
+
+[build]
+  cmd = "go build -o /tmp/main ./cmd/server/main.go"
+  bin = "/tmp/main"
+  delay = 1000
+  exclude_dir = ["bin", "tmp", "vendor", "migrations"]
+  include_ext = ["go", "tpl", "tmpl", "html"]
+  exclude_file = []
+  stop_on_error = true
+  log = "/tmp/build-errors.log"
+
+[run]
+  cmd = "/tmp/main"
+
+[log]
+  main = "/tmp/main.log"
+  color = true
+  time = true
+
+[misc]
+  clean_on_exit = false

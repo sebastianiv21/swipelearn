@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"swipelearn-api/internal/utils"
 )
 
 // Version information - will be set at build time
@@ -34,7 +35,18 @@ func main() {
 			FullTimestamp: true,
 		})
 	}
-	logger.SetLevel(logrus.InfoLevel)
+	// Configure log level from environment
+	logLevel := utils.GetEnvAsString("LOG_LEVEL", "info")
+	switch logLevel {
+	case "debug":
+		logger.SetLevel(logrus.DebugLevel)
+	case "warn":
+		logger.SetLevel(logrus.WarnLevel)
+	case "error":
+		logger.SetLevel(logrus.ErrorLevel)
+	default:
+		logger.SetLevel(logrus.InfoLevel)
+	}
 
 	// Log server version info on startup
 	logger.WithFields(logrus.Fields{
@@ -109,7 +121,7 @@ func main() {
 	})
 
 	// Configure server with proper timeouts
-	port := os.Getenv("PORT")
+	port := os.Getenv("API_PORT")
 	if port == "" {
 		port = "8080"
 		logger.WithField("port", port).Info("PORT not set, using default")
@@ -118,10 +130,10 @@ func main() {
 	server := &http.Server{
 		Addr:              ":" + port,
 		Handler:           router,
-		ReadTimeout:       10 * time.Second,
-		WriteTimeout:      10 * time.Second,
-		ReadHeaderTimeout: 5 * time.Second,
-		IdleTimeout:       60 * time.Second,
+		ReadTimeout:       utils.GetEnvAsDuration("SERVER_READ_TIMEOUT", 10*time.Second),
+		WriteTimeout:      utils.GetEnvAsDuration("SERVER_WRITE_TIMEOUT", 10*time.Second),
+		ReadHeaderTimeout:  utils.GetEnvAsDuration("SERVER_READ_HEADER_TIMEOUT", 5*time.Second),
+		IdleTimeout:       utils.GetEnvAsDuration("SERVER_IDLE_TIMEOUT", 60*time.Second),
 	}
 
 	// Start server in a goroutine
@@ -140,7 +152,7 @@ func main() {
 	logger.Info("Shutting down server...")
 
 	// Give outstanding requests a deadline for completion
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), utils.GetEnvAsDuration("SERVER_SHUTDOWN_TIMEOUT", 30*time.Second))
 	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
