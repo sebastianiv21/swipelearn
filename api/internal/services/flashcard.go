@@ -179,48 +179,62 @@ func (s *FlashcardService) DeleteWithOwnership(id uuid.UUID, userID uuid.UUID) e
 	return s.Delete(id)
 }
 
-// ReviewFlashcard handles the spaced repetition review logic
+// ReviewFlashcard handles the spaced repetition review logic using correct SM-2 algorithm
 func (s *FlashcardService) ReviewFlashcard(id uuid.UUID, quality int) (*models.Flashcard, error) {
+	// Validate quality range (0-5)
+	if quality < 0 || quality > 5 {
+		return nil, fmt.Errorf("quality must be between 0 and 5, got %d", quality)
+	}
+
 	card, err := s.flashcardRepo.GetByID(id)
 	if err != nil {
 		return nil, fmt.Errorf("flashcard not found: %w", err)
 	}
 
-	// SM-2 Algorithm
+	// SM-2 Algorithm - Correct Formula
 	q := float64(quality)
-	easeFactor := card.EaseFactor + (0.1 - (5-q)*(card.EaseFactor+q))
+
+	// Correct SM-2 ease factor formula:
+	// EF' = EF + (0.1 - (5-q) * (0.08 + (5-q) * 0.02))
+	newEaseFactor := card.EaseFactor + (0.1 - (5.0-q)*(0.08+(5.0-q)*0.02))
+
+	// Enforce minimum ease factor of 1.3
+	newEaseFactor = math.Max(1.3, newEaseFactor)
 
 	var newInterval int
+	var newRepetitions int
 	var nextReview time.Time
 
 	if q < 3 {
-		// Incorrect response, reset interval
+		// Incorrect response (quality 0, 1, or 2), reset interval and repetitions
 		newInterval = 1
+		newRepetitions = 0
 		nextReview = time.Now().Add(time.Hour * 24)
 	} else {
-		// Correct response, calculate new interval
-		switch card.ReviewCount {
-		case 0:
-			newInterval = 1
+		// Correct response (quality 3, 4, or 5)
+		newRepetitions = card.ReviewCount + 1
+
+		// Calculate new interval based on repetitions
+		switch newRepetitions {
 		case 1:
+			newInterval = 1
+		case 2:
 			newInterval = 6
 		default:
-			newInterval = int(math.Round(float64(card.Interval) * easeFactor))
+			newInterval = int(math.Round(float64(card.Interval) * newEaseFactor))
 		}
 		nextReview = time.Now().Add(time.Hour * 24 * time.Duration(newInterval))
 	}
 
-	// Update the card
+	// Update the card with all SM-2 fields
 	updateReq := &models.UpdateFlashcardRequest{
-		Difficulty: &easeFactor,
-		Interval:   &newInterval,
+		Difficulty:  &newEaseFactor,
+		Interval:    &newInterval,
+		EaseFactor:  &newEaseFactor,
+		ReviewCount: &newRepetitions,
+		LastReview:  &[]time.Time{time.Now()}[0],
+		NextReview:  &nextReview,
 	}
-
-	// Store review record
-	card.ReviewCount++
-	card.LastReview = &time.Time{}
-	*card.LastReview = time.Now()
-	card.NextReview = &nextReview
 
 	updatedCard, err := s.flashcardRepo.Update(id, updateReq)
 	if err != nil {
@@ -228,11 +242,13 @@ func (s *FlashcardService) ReviewFlashcard(id uuid.UUID, quality int) (*models.F
 	}
 
 	s.Logger.WithFields(logrus.Fields{
-		"flashcard_id": id,
-		"quality":      quality,
-		"new_interval": newInterval,
-		"next_review":  nextReview,
-	}).Info("Flashcard reviewed successfully")
+		"flashcard_id":    id,
+		"quality":         quality,
+		"new_interval":    newInterval,
+		"new_ease_factor": newEaseFactor,
+		"repetitions":     newRepetitions,
+		"next_review":     nextReview,
+	}).Info("Flashcard reviewed successfully with SM-2 algorithm")
 
 	return updatedCard, nil
 }

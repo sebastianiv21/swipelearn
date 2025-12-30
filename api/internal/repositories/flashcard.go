@@ -148,11 +148,28 @@ func (r *FlashcardRepository) Update(id uuid.UUID, updates *models.UpdateFlashca
 	if updates.Difficulty != nil {
 		card.Difficulty = *updates.Difficulty
 	}
+	if updates.Interval != nil {
+		card.Interval = *updates.Interval
+	}
+	if updates.EaseFactor != nil {
+		card.EaseFactor = *updates.EaseFactor
+	}
+	if updates.ReviewCount != nil {
+		card.ReviewCount = *updates.ReviewCount
+	}
+	if updates.LastReview != nil {
+		card.LastReview = updates.LastReview
+	}
+	if updates.NextReview != nil {
+		card.NextReview = updates.NextReview
+	}
 
-	// Single update query
+	// Comprehensive update query for SM-2 algorithm
 	query := `
         UPDATE flashcards
-        SET front = $2, back = $3, difficulty = $4, updated_at = NOW()
+        SET front = $2, back = $3, difficulty = $4, interval = $5, 
+            ease_factor = $6, review_count = $7, last_review = $8, 
+            next_review = $9, updated_at = NOW()
         WHERE id = $1
         RETURNING id, user_id, deck_id, front, back, difficulty, interval, ease_factor, review_count,
                   last_review, next_review, created_at, updated_at
@@ -160,7 +177,8 @@ func (r *FlashcardRepository) Update(id uuid.UUID, updates *models.UpdateFlashca
 
 	err = r.DB.QueryRow(
 		query,
-		id, card.Front, card.Back, card.Difficulty,
+		id, card.Front, card.Back, card.Difficulty, card.Interval,
+		card.EaseFactor, card.ReviewCount, card.LastReview, card.NextReview,
 	).Scan(
 		&card.ID, &card.UserID, &card.DeckID, &card.Front, &card.Back,
 		&card.Difficulty, &card.Interval, &card.EaseFactor, &card.ReviewCount,

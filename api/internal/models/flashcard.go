@@ -30,10 +30,14 @@ type CreateFlashcardRequest struct {
 }
 
 type UpdateFlashcardRequest struct {
-	Front      *string  `json:"front"`
-	Back       *string  `json:"back"`
-	Difficulty *float64 `json:"difficulty"`
-	Interval   *int     `json:"interval"`
+	Front       *string    `json:"front"`
+	Back        *string    `json:"back"`
+	Difficulty  *float64   `json:"difficulty"`
+	Interval    *int       `json:"interval"`
+	EaseFactor  *float64   `json:"ease_factor"`
+	ReviewCount *int       `json:"review_count"`
+	LastReview  *time.Time `json:"last_review"`
+	NextReview  *time.Time `json:"next_review"`
 }
 
 type ReviewFlashcardRequest struct {
