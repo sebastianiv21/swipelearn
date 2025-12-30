@@ -20,6 +20,9 @@ func SetupRouter(
 	// Middleware
 	// router.Use(middleware.CORS())
 
+	// Setup public auth routes (no JWT middleware required)
+	SetupAuthRoutes(router, authHandler)
+
 	// API routes group (with middleware)
 	apiGroup := router.Group("/api/v1")
 	apiGroup.Use(middleware.JWTAuth(jwtService)) // Apply JWT auth to all API routes
@@ -28,6 +31,12 @@ func SetupRouter(
 	SetupFlashcardRoutes(apiGroup, flashcardHandler)
 	SetupDeckRoutes(apiGroup, deckHandler)
 	SetupUserRoutes(apiGroup, userHandler)
+
+	// Protected auth routes
+	authGroup := apiGroup.Group("/auth")
+	{
+		authGroup.POST("/logout", authHandler.Logout) // POST /api/v1/auth/logout (protected)
+	}
 
 	return router
 }

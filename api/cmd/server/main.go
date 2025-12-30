@@ -58,7 +58,7 @@ func main() {
 	authService := services.NewAuthService(userRepo, refreshTokenRepo, jwtService, logger)
 	authHandler := handlers.NewAuthHandler(authService)
 
-	// Setup routes
+	// Setup routes (includes auth routes)
 	router := routes.SetupRouter(
 		flashcardHandler,
 		deckHandler,
@@ -66,9 +66,6 @@ func main() {
 		authHandler,
 		jwtService,
 	)
-
-	// Setup auth routes (public)
-	routes.SetupAuthRoutes(router, authHandler)
 
 	// Add logging middleware
 	router.Use(gin.LoggerWithFormatter(func(params gin.LogFormatterParams) string {

@@ -13,6 +13,6 @@ func SetupAuthRoutes(router *gin.Engine, authHandler *handlers.AuthHandler) {
 		auth.POST("/register", authHandler.Register)    // POST /api/v1/auth/register
 		auth.POST("/login", authHandler.Login)          // POST /api/v1/auth/login
 		auth.POST("/refresh", authHandler.RefreshToken) // POST /api/v1/auth/refresh
-		auth.POST("/logout", authHandler.Logout)        // POST /api/v1/auth/logout
+		// Note: logout moved to protected routes
 	}
 }
