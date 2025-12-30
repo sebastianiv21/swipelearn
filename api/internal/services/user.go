@@ -11,11 +11,11 @@ import (
 )
 
 type UserService struct {
-	userRepo *repositories.UserRepository
+	userRepo repositories.UserRepositoryInterface
 	Logger   *logrus.Logger
 }
 
-func NewUserService(repo *repositories.UserRepository, logger *logrus.Logger) *UserService {
+func NewUserService(repo repositories.UserRepositoryInterface, logger *logrus.Logger) *UserService {
 	return &UserService{
 		userRepo: repo,
 		Logger:   logger,
@@ -104,7 +104,7 @@ func (s *UserService) Update(id uuid.UUID, req *models.UpdateUserRequest) (*mode
 		updates["email"] = *req.Email
 	}
 
-	if req.Name != nil {
+	if req.Name != nil && *req.Name != existingUser.Name {
 		updates["name"] = *req.Name
 	}
 

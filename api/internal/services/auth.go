@@ -10,6 +10,15 @@ import (
 	"swipelearn-api/internal/repositories"
 )
 
+// JWTServiceInterface defines the interface for JWT operations used by AuthService
+type JWTServiceInterface interface {
+	GenerateTokenPair(userID, email string) (string, string, error)
+	ValidateAccessToken(tokenString string) (interface{}, error)
+	ValidateRefreshToken(tokenString string) (interface{}, error)
+	HashPassword(password string) (string, error)
+	CheckPassword(password, hash string) bool
+}
+
 type AuthService struct {
 	userRepo         *repositories.UserRepository
 	refreshTokenRepo *repositories.RefreshTokenRepository

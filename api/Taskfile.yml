@@ -91,6 +91,18 @@ tasks:
       - echo "🧪 Running tests..."
       - go test -v ./...
 
+  test-unit:
+    desc: Run unit tests only
+    cmds:
+      - echo "🧪 Running unit tests..."
+      - go test -v ./internal/services ./internal/repositories
+
+  test-integration:
+    desc: Run integration tests only
+    cmds:
+      - echo "🧪 Running integration tests..."
+      - go test -v ./internal/handlers
+
   test-coverage:
     desc: Run tests with coverage
     cmds:
@@ -98,6 +110,21 @@ tasks:
       - go test -v -coverprofile=bin/coverage.out ./...
       - go tool cover -html=bin/coverage.out -o bin/coverage.html
       - echo "📄 Coverage report bin/coverage.html"
+
+  test-unit-coverage:
+    desc: Run unit tests with coverage
+    cmds:
+      - echo "📊 Running unit tests with coverage..."
+      - go test -v -coverprofile=bin/unit-coverage.out ./internal/services ./internal/repositories
+      - go tool cover -html=bin/unit-coverage.out -o bin/unit-coverage.html
+      - echo "📄 Unit coverage report bin/unit-coverage.html"
+
+  test-all-with-db:
+    desc: Run all tests with database (requires PostgreSQL)
+    cmds:
+      - |
+        echo "🧪 Running all tests with database..."
+        DATABASE_URL="postgres://postgres:postgres@localhost:5432/testdb?sslmode=disable" go test -v ./...
 
   # Code quality
   fmt:

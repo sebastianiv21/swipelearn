@@ -13,11 +13,11 @@ import (
 )
 
 type FlashcardService struct {
-	flashcardRepo *repositories.FlashcardRepository
+	flashcardRepo repositories.FlashcardRepositoryInterface
 	Logger        *logrus.Logger
 }
 
-func NewFlashcardService(repo *repositories.FlashcardRepository, logger *logrus.Logger) *FlashcardService {
+func NewFlashcardService(repo repositories.FlashcardRepositoryInterface, logger *logrus.Logger) *FlashcardService {
 	return &FlashcardService{
 		flashcardRepo: repo,
 		Logger:        logger,

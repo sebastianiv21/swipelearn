@@ -11,11 +11,11 @@ import (
 )
 
 type DeckService struct {
-	deckRepo *repositories.DeckRepository
+	deckRepo repositories.DeckRepositoryInterface
 	Logger   *logrus.Logger
 }
 
-func NewDeckService(repo *repositories.DeckRepository, logger *logrus.Logger) *DeckService {
+func NewDeckService(repo repositories.DeckRepositoryInterface, logger *logrus.Logger) *DeckService {
 	return &DeckService{
 		deckRepo: repo,
 		Logger:   logger,
@@ -115,11 +115,11 @@ func (s *DeckService) Update(id uuid.UUID, req *models.UpdateDeckRequest) (*mode
 	// Build updates map
 	updates := make(map[string]interface{})
 
-	if req.Name != nil {
+	if req.Name != nil && *req.Name != existingDeck.Name {
 		updates["name"] = *req.Name
 	}
 
-	if req.Description != nil {
+	if req.Description != nil && *req.Description != existingDeck.Description {
 		updates["description"] = *req.Description
 	}
 
