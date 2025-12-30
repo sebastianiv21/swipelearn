@@ -30,7 +30,32 @@ func (h *DeckHandler) CreateDeck(c *gin.Context) {
 		return
 	}
 
-	deck, err := h.deckService.Create(&req)
+	// Get user_id from context
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "User ID not found in context",
+		})
+		return
+	}
+
+	userIDStr, ok := userIDInterface.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Invalid user ID type in context",
+		})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Invalid user ID format",
+		})
+		return
+	}
+
+	deck, err := h.deckService.Create(&req, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to create deck",
@@ -44,7 +69,32 @@ func (h *DeckHandler) CreateDeck(c *gin.Context) {
 
 // GetDecks handles GET /api/v1/decks
 func (h *DeckHandler) GetDecks(c *gin.Context) {
-	decks, err := h.deckService.GetAll()
+	// Get user_id from context
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "User ID not found in context",
+		})
+		return
+	}
+
+	userIDStr, ok := userIDInterface.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Invalid user ID type in context",
+		})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Invalid user ID format",
+		})
+		return
+	}
+
+	decks, err := h.deckService.GetByUser(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to retrieve decks",
@@ -68,8 +118,39 @@ func (h *DeckHandler) GetDeck(c *gin.Context) {
 		return
 	}
 
-	deck, err := h.deckService.GetByID(id)
+	// Get user_id from context
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "User ID not found in context",
+		})
+		return
+	}
+
+	userIDStr, ok := userIDInterface.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Invalid user ID type in context",
+		})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Invalid user ID format",
+		})
+		return
+	}
+
+	deck, err := h.deckService.GetByIDWithOwnership(id, userID)
+	if err != nil {
+		if err.Error() == "unauthorized: deck does not belong to user" {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "You are not authorized to access this deck",
+			})
+			return
+		}
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "Deck not found",
 		})
@@ -89,6 +170,31 @@ func (h *DeckHandler) UpdateDeck(c *gin.Context) {
 		return
 	}
 
+	// Get user_id from context
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "User ID not found in context",
+		})
+		return
+	}
+
+	userIDStr, ok := userIDInterface.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Invalid user ID type in context",
+		})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Invalid user ID format",
+		})
+		return
+	}
+
 	var req models.UpdateDeckRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -98,8 +204,14 @@ func (h *DeckHandler) UpdateDeck(c *gin.Context) {
 		return
 	}
 
-	deck, err := h.deckService.Update(id, &req)
+	deck, err := h.deckService.UpdateWithOwnership(id, userID, &req)
 	if err != nil {
+		if err.Error() == "unauthorized: deck does not belong to user" {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "You are not authorized to update this deck",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to update deck",
 			"details": err.Error(),
@@ -120,8 +232,39 @@ func (h *DeckHandler) DeleteDeck(c *gin.Context) {
 		return
 	}
 
-	err = h.deckService.Delete(id)
+	// Get user_id from context
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "User ID not found in context",
+		})
+		return
+	}
+
+	userIDStr, ok := userIDInterface.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Invalid user ID type in context",
+		})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Invalid user ID format",
+		})
+		return
+	}
+
+	err = h.deckService.DeleteWithOwnership(id, userID)
+	if err != nil {
+		if err.Error() == "unauthorized: deck does not belong to user" {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "You are not authorized to delete this deck",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to delete deck",
 			"details": err.Error(),

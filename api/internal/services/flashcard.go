@@ -237,6 +237,28 @@ func (s *FlashcardService) ReviewFlashcard(id uuid.UUID, quality int) (*models.F
 	return updatedCard, nil
 }
 
+// ReviewFlashcardWithOwnership handles the spaced repetition review logic with user ownership validation
+func (s *FlashcardService) ReviewFlashcardWithOwnership(id uuid.UUID, userID uuid.UUID, quality int) (*models.Flashcard, error) {
+	// Get the flashcard first
+	card, err := s.flashcardRepo.GetByID(id)
+	if err != nil {
+		return nil, fmt.Errorf("flashcard not found: %w", err)
+	}
+
+	// Check if the card belongs to the user
+	if card.UserID != userID {
+		s.Logger.WithFields(logrus.Fields{
+			"flashcard_id": id,
+			"user_id":      userID,
+			"owner_id":     card.UserID,
+		}).Warn("Unauthorized attempt to review flashcard")
+		return nil, fmt.Errorf("unauthorized: flashcard does not belong to user")
+	}
+
+	// Call the regular review method
+	return s.ReviewFlashcard(id, quality)
+}
+
 // GetDueCards retrieves flashcards that are due for review
 func (s *FlashcardService) GetDueCards(userID uuid.UUID) ([]*models.Flashcard, error) {
 	flashcards, err := s.flashcardRepo.GetByUser(userID)

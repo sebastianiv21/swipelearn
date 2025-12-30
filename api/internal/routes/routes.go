@@ -18,7 +18,7 @@ func SetupRouter(
 	router := gin.New()
 
 	// Middleware
-	// router.Use(middleware.CORS())
+	router.Use(middleware.CORS())
 
 	// Setup public auth routes (no JWT middleware required)
 	SetupAuthRoutes(router, authHandler)

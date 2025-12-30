@@ -24,18 +24,20 @@ func NewDeckRepository(db *sql.DB, logger *logrus.Logger) *DeckRepository {
 // Create creates a new deck
 func (r *DeckRepository) Create(deck *models.Deck) (*models.Deck, error) {
 	query := `
-		INSERT INTO decks (id, name, description)
-		VALUES ($1, $2, $3)
-		RETURNING id, name, description, created_at, updated_at
+		INSERT INTO decks (id, user_id, name, description)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, user_id, name, description, created_at, updated_at
 	`
 
 	err := r.DB.QueryRow(
 		query,
 		deck.ID,
+		deck.UserID,
 		deck.Name,
 		deck.Description,
 	).Scan(
 		&deck.ID,
+		&deck.UserID,
 		&deck.Name,
 		&deck.Description,
 		&deck.CreatedAt,
@@ -54,7 +56,7 @@ func (r *DeckRepository) Create(deck *models.Deck) (*models.Deck, error) {
 // GetByID retrieves a deck by ID
 func (r *DeckRepository) GetByID(id uuid.UUID) (*models.Deck, error) {
 	query := `
-		SELECT id, name, description, created_at, updated_at
+		SELECT id, user_id, name, description, created_at, updated_at
 		FROM decks
 		WHERE id = $1
 	`
@@ -62,6 +64,7 @@ func (r *DeckRepository) GetByID(id uuid.UUID) (*models.Deck, error) {
 	deck := &models.Deck{}
 	err := r.DB.QueryRow(query, id).Scan(
 		&deck.ID,
+		&deck.UserID,
 		&deck.Name,
 		&deck.Description,
 		&deck.CreatedAt,
@@ -82,7 +85,7 @@ func (r *DeckRepository) GetByID(id uuid.UUID) (*models.Deck, error) {
 // GetAll retrieves all decks
 func (r *DeckRepository) GetAll() ([]*models.Deck, error) {
 	query := `
-		SELECT id, name, description, created_at, updated_at
+		SELECT id, user_id, name, description, created_at, updated_at
 		FROM decks
 		ORDER BY created_at DESC
 	`
@@ -99,6 +102,7 @@ func (r *DeckRepository) GetAll() ([]*models.Deck, error) {
 		deck := &models.Deck{}
 		err := rows.Scan(
 			&deck.ID,
+			&deck.UserID,
 			&deck.Name,
 			&deck.Description,
 			&deck.CreatedAt,
@@ -150,12 +154,13 @@ func (r *DeckRepository) Update(id uuid.UUID, updates map[string]interface{}) (*
 		UPDATE decks
 		SET %s
 		WHERE id = $%d
-		RETURNING id, name, description, created_at, updated_at
+		RETURNING id, user_id, name, description, created_at, updated_at
 	`, fmt.Sprintf("%s", setParts), argIndex)
 
 	deck := &models.Deck{}
 	err := r.DB.QueryRow(query, args...).Scan(
 		&deck.ID,
+		&deck.UserID,
 		&deck.Name,
 		&deck.Description,
 		&deck.CreatedAt,
@@ -197,7 +202,49 @@ func (r *DeckRepository) Delete(id uuid.UUID) error {
 	return nil
 }
 
-// GetDeckFlashcardCount retrieves the number of flashcards in a deck
+// GetByUser retrieves all decks for a user
+func (r *DeckRepository) GetByUser(userID uuid.UUID) ([]*models.Deck, error) {
+	query := `
+		SELECT id, user_id, name, description, created_at, updated_at
+		FROM decks
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.DB.Query(query, userID)
+	if err != nil {
+		r.Logger.WithError(err).WithField("user_id", userID).Error("Failed to get decks for user")
+		return nil, fmt.Errorf("failed to get decks: %w", err)
+	}
+	defer rows.Close()
+
+	var decks []*models.Deck
+	for rows.Next() {
+		deck := &models.Deck{}
+		err := rows.Scan(
+			&deck.ID,
+			&deck.UserID,
+			&deck.Name,
+			&deck.Description,
+			&deck.CreatedAt,
+			&deck.UpdatedAt,
+		)
+		if err != nil {
+			r.Logger.WithError(err).Error("Failed to scan deck row")
+			return nil, fmt.Errorf("failed to scan deck: %w", err)
+		}
+		decks = append(decks, deck)
+	}
+
+	if err = rows.Err(); err != nil {
+		r.Logger.WithError(err).Error("Error after scanning deck rows")
+		return nil, fmt.Errorf("error scanning decks: %w", err)
+	}
+
+	return decks, nil
+}
+
+// GetDeckFlashcardCount retrieves number of flashcards in a deck
 func (r *DeckRepository) GetDeckFlashcardCount(deckID uuid.UUID) (int, error) {
 	query := `SELECT COUNT(*) FROM flashcards WHERE deck_id = $1`
 

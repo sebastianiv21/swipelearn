@@ -254,6 +254,31 @@ func (h *FlashcardHandler) ReviewFlashcard(c *gin.Context) {
 		return
 	}
 
+	// Get user_id from context
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "User ID not found in context",
+		})
+		return
+	}
+
+	userIDStr, ok := userIDInterface.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Invalid user ID type in context",
+		})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Invalid user ID format",
+		})
+		return
+	}
+
 	var req models.ReviewFlashcardRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -263,8 +288,14 @@ func (h *FlashcardHandler) ReviewFlashcard(c *gin.Context) {
 		return
 	}
 
-	flashcard, err := h.flashcardService.ReviewFlashcard(id, req.Quality)
+	flashcard, err := h.flashcardService.ReviewFlashcardWithOwnership(id, userID, req.Quality)
 	if err != nil {
+		if err.Error() == "unauthorized: flashcard does not belong to user" {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "You are not authorized to review this flashcard",
+			})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Failed to review flashcard",
 			"details": err.Error(),
