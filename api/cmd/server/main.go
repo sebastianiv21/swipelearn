@@ -44,11 +44,19 @@ func main() {
 	flashcardService := services.NewFlashcardService(flashcardRepo, logger)
 	flashcardHandler := handlers.NewFlashcardHandler(flashcardService)
 
+	userRepo := repositories.NewUserRepository(database.DB, logger)
+	userService := services.NewUserService(userRepo, logger)
+	userHandler := handlers.NewUserHandler(userService)
+
+	deckRepo := repositories.NewDeckRepository(database.DB, logger)
+	deckService := services.NewDeckService(deckRepo, logger)
+	deckHandler := handlers.NewDeckHandler(deckService)
+
 	// Setup routes
 	router := routes.SetupRouter(
 		flashcardHandler,
-		// deckHandler,
-		// userHandler,
+		deckHandler,
+		userHandler,
 		// healthHandler,
 	)
 

@@ -12,4 +12,6 @@ func SetupFlashcardRoutes(apiGroup *gin.RouterGroup, flashcardHandler *handlers.
 	apiGroup.POST("", flashcardHandler.CreateFlashcard)
 	apiGroup.PUT("/:id", flashcardHandler.UpdateFlashcard)
 	apiGroup.DELETE("/:id", flashcardHandler.DeleteFlashcard)
+	apiGroup.POST("/:id/review", flashcardHandler.ReviewFlashcard) // POST /api/v1/flashcards/:id/review
+	apiGroup.GET("/due", flashcardHandler.GetDueFlashcards)        // GET /api/v1/flashcards/due
 }

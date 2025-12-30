@@ -30,9 +30,13 @@ func (s *FlashcardService) Create(req *models.CreateFlashcardRequest) (*models.F
 	if req.DeckID == uuid.Nil {
 		return nil, fmt.Errorf("deck ID is required")
 	}
+	if req.UserID == uuid.Nil {
+		return nil, fmt.Errorf("user ID is required")
+	}
 
 	card := &models.Flashcard{
 		ID:          uuid.New(),
+		UserID:      req.UserID,
 		Front:       req.Front,
 		Back:        req.Back,
 		DeckID:      req.DeckID,
@@ -50,6 +54,7 @@ func (s *FlashcardService) Create(req *models.CreateFlashcardRequest) (*models.F
 
 	s.Logger.WithFields(logrus.Fields{
 		"flashcard_id": savedCard.ID,
+		"user_id":      savedCard.UserID,
 		"deck_id":      savedCard.DeckID,
 	}).Info("Flashcard created successfully")
 
@@ -121,6 +126,23 @@ func (s *FlashcardService) Update(id uuid.UUID, req *models.UpdateFlashcardReque
 	return updatedCard, nil
 }
 
+// UpdateWithOwnership updates a flashcard with user ownership validation
+func (s *FlashcardService) UpdateWithOwnership(id uuid.UUID, userID uuid.UUID, req *models.UpdateFlashcardRequest) (*models.Flashcard, error) {
+	// Get existing card first
+	existingCard, err := s.flashcardRepo.GetByID(id)
+	if err != nil {
+		return nil, fmt.Errorf("flashcard not found: %w", err)
+	}
+
+	// Check if the card belongs to the user
+	if existingCard.UserID != userID {
+		return nil, fmt.Errorf("unauthorized: flashcard does not belong to user")
+	}
+
+	// Call the regular update method
+	return s.Update(id, req)
+}
+
 // Delete removes a flashcard with validation
 func (s *FlashcardService) Delete(id uuid.UUID) error {
 	// Check if card exists first
@@ -138,6 +160,23 @@ func (s *FlashcardService) Delete(id uuid.UUID) error {
 
 	s.Logger.WithField("flashcard_id", id).Info("Flashcard deleted successfully")
 	return nil
+}
+
+// DeleteWithOwnership removes a flashcard with user ownership validation
+func (s *FlashcardService) DeleteWithOwnership(id uuid.UUID, userID uuid.UUID) error {
+	// Get existing card first
+	existingCard, err := s.flashcardRepo.GetByID(id)
+	if err != nil {
+		return fmt.Errorf("flashcard not found: %w", err)
+	}
+
+	// Check if the card belongs to the user
+	if existingCard.UserID != userID {
+		return fmt.Errorf("unauthorized: flashcard does not belong to user")
+	}
+
+	// Call the regular delete method
+	return s.Delete(id)
 }
 
 // ReviewFlashcard handles the spaced repetition review logic
@@ -196,4 +235,30 @@ func (s *FlashcardService) ReviewFlashcard(id uuid.UUID, quality int) (*models.F
 	}).Info("Flashcard reviewed successfully")
 
 	return updatedCard, nil
+}
+
+// GetDueCards retrieves flashcards that are due for review
+func (s *FlashcardService) GetDueCards(userID uuid.UUID) ([]*models.Flashcard, error) {
+	flashcards, err := s.flashcardRepo.GetByUser(userID)
+	if err != nil {
+		s.Logger.WithError(err).WithField("user_id", userID).Error("Service failed to get flashcards for due cards")
+		return nil, fmt.Errorf("failed to get flashcards: %w", err)
+	}
+
+	var dueCards []*models.Flashcard
+	now := time.Now()
+
+	for _, card := range flashcards {
+		// If next_review is nil or is in the past, card is due
+		if card.NextReview == nil || card.NextReview.Before(now) {
+			dueCards = append(dueCards, card)
+		}
+	}
+
+	s.Logger.WithFields(logrus.Fields{
+		"user_id":        userID,
+		"due_card_count": len(dueCards),
+	}).Info("Retrieved due flashcards for user")
+
+	return dueCards, nil
 }

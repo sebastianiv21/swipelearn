@@ -18,3 +18,8 @@ type CreateDeckRequest struct {
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description"`
 }
+
+type UpdateDeckRequest struct {
+	Name        *string `json:"name"`
+	Description *string `json:"description"`
+}

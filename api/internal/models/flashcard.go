@@ -8,7 +8,7 @@ import (
 
 type Flashcard struct {
 	ID          uuid.UUID  `json:"id" db:"id"`
-	UserID		uuid.UUID  `json:"user_id" db:"user_id"`
+	UserID      uuid.UUID  `json:"user_id" db:"user_id"`
 	Front       string     `json:"front" db:"front"`
 	Back        string     `json:"back" db:"back"`
 	DeckID      uuid.UUID  `json:"deck_id" db:"deck_id"`
@@ -25,6 +25,7 @@ type Flashcard struct {
 type CreateFlashcardRequest struct {
 	Front  string    `json:"front" binding:"required"`
 	Back   string    `json:"back" binding:"required"`
+	UserID uuid.UUID `json:"user_id" binding:"required"`
 	DeckID uuid.UUID `json:"deck_id" binding:"required"`
 }
 
@@ -33,4 +34,8 @@ type UpdateFlashcardRequest struct {
 	Back       *string  `json:"back"`
 	Difficulty *float64 `json:"difficulty"`
 	Interval   *int     `json:"interval"`
+}
+
+type ReviewFlashcardRequest struct {
+	Quality int `json:"quality" binding:"required,min=0,max=5"`
 }

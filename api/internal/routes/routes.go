@@ -2,14 +2,15 @@ package routes
 
 import (
 	"swipelearn-api/internal/handlers"
+	"swipelearn-api/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
 func SetupRouter(
 	flashcardHandler *handlers.FlashcardHandler,
-	// deckHandler *handlers.DeckHandler,
-	// userHandler *handlers.UserHandler,
+	deckHandler *handlers.DeckHandler,
+	userHandler *handlers.UserHandler,
 	// healthHandler *handlers.HealthHandler,
 ) *gin.Engine {
 	router := gin.New()
@@ -24,12 +25,12 @@ func SetupRouter(
 
 	// API routes group (with middleware)
 	apiGroup := router.Group("/api/v1")
-	// apiGroup.Use(middleware.Auth()) // Apply auth to all API routes
+	apiGroup.Use(middleware.SimpleAuth()) // Apply auth to all API routes
 
 	// Setup route groups
 	SetupFlashcardRoutes(apiGroup, flashcardHandler)
-	// SetupDeckRoutes(apiGroup, deckHandler)
-	// SetupUserRoutes(apiGroup, userHandler)
+	SetupDeckRoutes(apiGroup, deckHandler)
+	SetupUserRoutes(apiGroup, userHandler)
 
 	return router
 }
