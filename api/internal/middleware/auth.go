@@ -2,41 +2,90 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
+	"swipelearn-api/internal/services"
 )
 
-// SimpleAuth is a simple authentication middleware that checks for X-User-ID header
-// This is a basic implementation for demonstration purposes
-// In production, you should use proper JWT or OAuth authentication
-func SimpleAuth() gin.HandlerFunc {
+// JWTAuth is JWT authentication middleware that validates Bearer tokens
+func JWTAuth(jwtService *services.JWTService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userIDStr := c.GetHeader("X-User-ID")
-		if userIDStr == "" {
-			// For development, allow user_id as query parameter
-			userIDStr = c.Query("user_id")
-		}
-
-		if userIDStr == "" {
+		// Get Authorization header
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "User ID is required. Provide it in X-User-ID header or user_id query parameter",
+				"error": "Authorization header is required",
 			})
 			c.Abort()
 			return
 		}
 
-		userID, err := uuid.Parse(userIDStr)
+		// Extract token from "Bearer <token>" format
+		tokenParts := strings.SplitN(authHeader, " ", 2)
+		if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "Invalid authorization header format. Expected: Bearer <token>",
+			})
+			c.Abort()
+			return
+		}
+
+		tokenString := tokenParts[1]
+
+		// Validate token
+		claims, err := jwtService.ValidateAccessToken(tokenString)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "Invalid User ID format",
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "Invalid or expired token",
 			})
 			c.Abort()
 			return
 		}
 
-		// Set user ID in context for downstream handlers
-		c.Set("user_id", userID)
+		// Set user claims in context for downstream handlers
+		c.Set("user_id", claims.UserID)
+		c.Set("user_email", claims.Email)
+		c.Next()
+	}
+}
+
+// OptionalJWTAuth is optional JWT authentication that allows both authenticated and unauthenticated access
+func OptionalJWTAuth(jwtService *services.JWTService) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get Authorization header
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			// No auth header - continue without setting user context
+			c.Next()
+			return
+		}
+
+		// Extract token from "Bearer <token>" format
+		tokenParts := strings.SplitN(authHeader, " ", 2)
+		if len(tokenParts) != 2 || tokenParts[0] != "Bearer" {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "Invalid authorization header format. Expected: Bearer <token>",
+			})
+			c.Abort()
+			return
+		}
+
+		tokenString := tokenParts[1]
+
+		// Validate token
+		claims, err := jwtService.ValidateAccessToken(tokenString)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "Invalid or expired token",
+			})
+			c.Abort()
+			return
+		}
+
+		// Set user claims in context for downstream handlers
+		c.Set("user_id", claims.UserID)
+		c.Set("user_email", claims.Email)
 		c.Next()
 	}
 }

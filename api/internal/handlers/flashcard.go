@@ -31,7 +31,7 @@ func (h *FlashcardHandler) CreateFlashcard(c *gin.Context) {
 		return
 	}
 
-	// Get user_id from context and override the user_id in request
+	// Get user_id from context and override user_id in request
 	userIDInterface, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -40,10 +40,18 @@ func (h *FlashcardHandler) CreateFlashcard(c *gin.Context) {
 		return
 	}
 
-	userID, ok := userIDInterface.(uuid.UUID)
+	userIDStr, ok := userIDInterface.(string)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Invalid user ID type in context",
+		})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Invalid user ID format",
 		})
 		return
 	}
@@ -65,7 +73,7 @@ func (h *FlashcardHandler) CreateFlashcard(c *gin.Context) {
 
 // GetFlashcards handles GET /api/v1/flashcards
 func (h *FlashcardHandler) GetFlashcards(c *gin.Context) {
-	// Get user_id from context (set by auth middleware)
+	// Get user_id from context (set by JWT middleware)
 	userIDInterface, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -74,10 +82,18 @@ func (h *FlashcardHandler) GetFlashcards(c *gin.Context) {
 		return
 	}
 
-	userID, ok := userIDInterface.(uuid.UUID)
+	userIDStr, ok := userIDInterface.(string)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Invalid user ID type in context",
+		})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Invalid user ID format",
 		})
 		return
 	}
@@ -133,10 +149,18 @@ func (h *FlashcardHandler) UpdateFlashcard(c *gin.Context) {
 		return
 	}
 
-	userID, ok := userIDInterface.(uuid.UUID)
+	userIDStr, ok := userIDInterface.(string)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Invalid user ID type in context",
+		})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Invalid user ID format",
 		})
 		return
 	}
@@ -185,10 +209,18 @@ func (h *FlashcardHandler) DeleteFlashcard(c *gin.Context) {
 		return
 	}
 
-	userID, ok := userIDInterface.(uuid.UUID)
+	userIDStr, ok := userIDInterface.(string)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Invalid user ID type in context",
+		})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Invalid user ID format",
 		})
 		return
 	}
@@ -245,7 +277,7 @@ func (h *FlashcardHandler) ReviewFlashcard(c *gin.Context) {
 
 // GetDueFlashcards handles GET /api/v1/flashcards/due
 func (h *FlashcardHandler) GetDueFlashcards(c *gin.Context) {
-	// Get user_id from context (set by auth middleware)
+	// Get user_id from context (set by JWT middleware)
 	userIDInterface, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
@@ -254,10 +286,18 @@ func (h *FlashcardHandler) GetDueFlashcards(c *gin.Context) {
 		return
 	}
 
-	userID, ok := userIDInterface.(uuid.UUID)
+	userIDStr, ok := userIDInterface.(string)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Invalid user ID type in context",
+		})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Invalid user ID format",
 		})
 		return
 	}

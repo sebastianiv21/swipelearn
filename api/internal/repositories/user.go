@@ -24,9 +24,9 @@ func NewUserRepository(db *sql.DB, logger *logrus.Logger) *UserRepository {
 // Create creates a new user
 func (r *UserRepository) Create(user *models.User) (*models.User, error) {
 	query := `
-		INSERT INTO users (id, email, name)
-		VALUES ($1, $2, $3)
-		RETURNING id, email, name, created_at, updated_at
+		INSERT INTO users (id, email, name, password_hash)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, email, name, password_hash, created_at, updated_at
 	`
 
 	err := r.DB.QueryRow(
@@ -34,10 +34,12 @@ func (r *UserRepository) Create(user *models.User) (*models.User, error) {
 		user.ID,
 		user.Email,
 		user.Name,
+		user.PasswordHash,
 	).Scan(
 		&user.ID,
 		&user.Email,
 		&user.Name,
+		&user.PasswordHash,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -54,7 +56,7 @@ func (r *UserRepository) Create(user *models.User) (*models.User, error) {
 // GetByID retrieves a user by ID
 func (r *UserRepository) GetByID(id uuid.UUID) (*models.User, error) {
 	query := `
-		SELECT id, email, name, created_at, updated_at
+		SELECT id, email, name, password_hash, created_at, updated_at
 		FROM users
 		WHERE id = $1
 	`
@@ -64,6 +66,7 @@ func (r *UserRepository) GetByID(id uuid.UUID) (*models.User, error) {
 		&user.ID,
 		&user.Email,
 		&user.Name,
+		&user.PasswordHash,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -82,7 +85,7 @@ func (r *UserRepository) GetByID(id uuid.UUID) (*models.User, error) {
 // GetByEmail retrieves a user by email
 func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 	query := `
-		SELECT id, email, name, created_at, updated_at
+		SELECT id, email, name, password_hash, created_at, updated_at
 		FROM users
 		WHERE email = $1
 	`
@@ -92,6 +95,7 @@ func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 		&user.ID,
 		&user.Email,
 		&user.Name,
+		&user.PasswordHash,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -110,7 +114,7 @@ func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 // GetAll retrieves all users
 func (r *UserRepository) GetAll() ([]*models.User, error) {
 	query := `
-		SELECT id, email, name, created_at, updated_at
+		SELECT id, email, name, password_hash, created_at, updated_at
 		FROM users
 		ORDER BY created_at DESC
 	`
@@ -129,6 +133,7 @@ func (r *UserRepository) GetAll() ([]*models.User, error) {
 			&user.ID,
 			&user.Email,
 			&user.Name,
+			&user.PasswordHash,
 			&user.CreatedAt,
 			&user.UpdatedAt,
 		)
@@ -178,7 +183,7 @@ func (r *UserRepository) Update(id uuid.UUID, updates map[string]interface{}) (*
 		UPDATE users
 		SET %s
 		WHERE id = $%d
-		RETURNING id, email, name, created_at, updated_at
+		RETURNING id, email, name, password_hash, created_at, updated_at
 	`, fmt.Sprintf("%s", setParts), argIndex)
 
 	user := &models.User{}
@@ -186,6 +191,7 @@ func (r *UserRepository) Update(id uuid.UUID, updates map[string]interface{}) (*
 		&user.ID,
 		&user.Email,
 		&user.Name,
+		&user.PasswordHash,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)

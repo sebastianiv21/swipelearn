@@ -52,13 +52,23 @@ func main() {
 	deckService := services.NewDeckService(deckRepo, logger)
 	deckHandler := handlers.NewDeckHandler(deckService)
 
+	// JWT and Auth services
+	jwtService := services.NewJWTService(logger)
+	refreshTokenRepo := repositories.NewRefreshTokenRepository(database.DB, logger)
+	authService := services.NewAuthService(userRepo, refreshTokenRepo, jwtService, logger)
+	authHandler := handlers.NewAuthHandler(authService)
+
 	// Setup routes
 	router := routes.SetupRouter(
 		flashcardHandler,
 		deckHandler,
 		userHandler,
-		// healthHandler,
+		authHandler,
+		jwtService,
 	)
+
+	// Setup auth routes (public)
+	routes.SetupAuthRoutes(router, authHandler)
 
 	// Add logging middleware
 	router.Use(gin.LoggerWithFormatter(func(params gin.LogFormatterParams) string {
