@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Background circle -->
+  <circle cx="16" cy="16" r="16" fill="#3B82F6"/>
+  
+  <!-- Flashcard representation -->
+  <rect x="6" y="10" width="20" height="12" rx="2" fill="white"/>
+  
+  <!-- Text lines on card -->
+  <rect x="9" y="13" width="8" height="1.5" rx="0.75" fill="#3B82F6"/>
+  <rect x="19" y="13" width="3" height="1.5" rx="0.75" fill="#93C5FD"/>
+  <rect x="9" y="16.5" width="10" height="1.5" rx="0.75" fill="#3B82F6"/>
+  <rect x="21" y="16.5" width="2" height="1.5" rx="0.75" fill="#93C5FD"/>
+  
+  <!-- Swipe arrow -->
+  <path d="M14 20L16 22L18 20" stroke="#60A5FA" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>
