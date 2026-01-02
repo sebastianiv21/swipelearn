@@ -1,10 +1,16 @@
 import { useSession, signOut } from '../lib/auth-client';
 import { Link, useNavigate } from 'react-router-dom';
-import { BookOpen, Plus, BarChart3, LogOut } from 'lucide-react';
+import { BookOpen, BarChart3, LogOut, Clock } from 'lucide-react';
+import { useDecks } from '../hooks/useDecks';
+import { useDueFlashcards } from '../hooks/useFlashcards';
 
 export default function DashboardPage() {
   const session = useSession();
   const navigate = useNavigate();
+  
+  // Fetch real data for statistics
+  const { data: decks, isLoading: isLoadingDecks } = useDecks();
+  const { data: dueCards, isLoading: isLoadingDueCards } = useDueFlashcards();
 
   const handleLogout = async () => {
     try {
@@ -54,15 +60,19 @@ export default function DashboardPage() {
           <div className="card text-center">
             <BookOpen className="h-8 w-8 text-blue-600 mx-auto mb-2" />
             <h3 className="font-semibold text-gray-900">Decks</h3>
-            <p className="text-2xl font-bold text-gray-900">0</p>
+            <p className="text-2xl font-bold text-gray-900">
+              {isLoadingDecks ? '...' : decks?.length || 0}
+            </p>
           </div>
           <div className="card text-center">
-            <BarChart3 className="h-8 w-8 text-green-600 mx-auto mb-2" />
-            <h3 className="font-semibold text-gray-900">Cards Studied</h3>
-            <p className="text-2xl font-bold text-gray-900">0</p>
+            <Clock className="h-8 w-8 text-green-600 mx-auto mb-2" />
+            <h3 className="font-semibold text-gray-900">Due Today</h3>
+            <p className="text-2xl font-bold text-gray-900">
+              {isLoadingDueCards ? '...' : dueCards?.length || 0}
+            </p>
           </div>
           <div className="card text-center">
-            <Plus className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+            <BarChart3 className="h-8 w-8 text-purple-600 mx-auto mb-2" />
             <h3 className="font-semibold text-gray-900">Study Streak</h3>
             <p className="text-2xl font-bold text-gray-900">0 days</p>
           </div>
@@ -86,7 +96,14 @@ export default function DashboardPage() {
               className="card hover:shadow-md transition-shadow duration-200"
             >
               <h3 className="font-semibold text-gray-900 mb-2">Start Studying</h3>
-              <p className="text-sm text-gray-600">Review cards using spaced repetition</p>
+              <p className="text-sm text-gray-600">
+                Review cards using spaced repetition
+                {dueCards && dueCards.length > 0 && (
+                  <span className="block text-green-600 font-semibold mt-1">
+                    {dueCards.length} cards due today!
+                  </span>
+                )}
+              </p>
             </Link>
           </div>
         </div>
